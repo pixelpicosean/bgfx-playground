@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
+
+#include <bgfx_utils.h>
+#include <common.h>
 
 #include <bgfx/bgfx.h>
-#include <common.h>
+#include <math.h>
 
 struct PosTexcoordVertex {
   float x = 0.0f;
@@ -22,28 +24,33 @@ struct PosTexcoordVertex {
   static bgfx::VertexDecl decl;
 };
 
-bgfx::VertexDecl PosTexcoordVertex::scDecl;
+bgfx::VertexDecl PosTexcoordVertex::decl;
 
-int _main_(int argc, char* const* argv) {
+int _main_(int argc, char** argv) {
+  // Constants
   uint32_t width = 640;
   uint32_t height = 480;
-  uint32_t debug = BGFX_DEBUG_MODE;
+  uint32_t debug = BGFX_DEBUG_TEXT;
   uint32_t reset = BGFX_RESET_VSYNC;
 
-  entry::WindowHandle defaultWindow = nullptr;
+  // Setup window
+  entry::WindowHandle defaultWindow = {0};
   entry::setWindowTitle(defaultWindow, "LesserPanda");
-  //entry::toggleFullscreen(defaultWindow);
+  entry::setWindowSize(defaultWindow, width, height);
+  /* entry::toggleFullscreen(defaultWindow); */
 
+  // Initialize bgfx
   bgfx::init();
   bgfx::reset(width, height, reset);
   bgfx::setDebug(debug);
 
   bgfx::setViewClear(0, BGFX_CLEAR_COLOR, 0x000000ff, 1.0f, 0);
 
-  Vertex::init();
+  // Initialize vertex defination
+  PosTexcoordVertex::init();
 
+  // Game loop
   int64_t timeOffset = bx::getHPCounter();
-
   while (!entry::processEvents(width, height, debug, reset)) {
     int64_t now = bx::getHPCounter();
     static int64_t last = now;
@@ -59,10 +66,15 @@ int _main_(int argc, char* const* argv) {
     // Dummy draw call
     bgfx::touch(0);
 
+    bgfx::dbgTextClear();
+    bgfx::dbgTextPrintf(0, 1, 0x4f, "Hello BGFX");
+    bgfx::dbgTextPrintf(0, 2, 0x6f, "My name is Sean");
+
     // Advance to next frame
     bgfx::frame();
   }
 
+  // Cleanup
   bgfx::shutdown();
 
   return 0;
