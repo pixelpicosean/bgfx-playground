@@ -7,11 +7,14 @@
 #include <bgfx/bgfx.h>
 #include <math.h>
 
+#include "vs_sprite.bin.h"
+#include "fs_sprite.bin.h"
+
 struct PosTexcoordVertex {
-  float x = 0.0f;
-  float y = 0.0f;
-  int16_t u = 0;
-  int16_t v = 0;
+  float x;
+  float y;
+  int16_t u;
+  int16_t v;
 
   static void init() {
     decl
@@ -25,6 +28,18 @@ struct PosTexcoordVertex {
 };
 
 bgfx::VertexDecl PosTexcoordVertex::decl;
+
+static PosTexcoordVertex vertices[4] = {
+  { -0.5f, +0.5f, 0, 0 },
+  { +0.5f, +0.5f, 0, 0 },
+  { +0.5f, -0.5f, 0, 0 },
+  { -0.5f, -0.5f, 0, 0 },
+};
+
+static uint16_t indices[6] = {
+  0, 1, 2,
+  0, 2, 3,
+};
 
 int _main_(int argc, char** argv) {
   // Constants
@@ -49,6 +64,18 @@ int _main_(int argc, char** argv) {
   // Initialize vertex defination
   PosTexcoordVertex::init();
 
+  // Prepare for rendering
+  auto vertexBuffer = bgfx::createVertexBuffer(
+    bgfx::makeRef(vertices, sizeof(vertices)),
+    PosTexcoordVertex::decl
+  );
+  auto indexBuffer = bgfx::createIndexBuffer(
+    bgfx::makeRef(indices, sizeof(indices))
+  );
+  auto vs = bgfx::createShader(bgfx::makeRef(vs_sprite_glsl, sizeof(vs_sprite_glsl)));
+  auto fs = bgfx::createShader(bgfx::makeRef(fs_sprite_glsl, sizeof(fs_sprite_glsl)));
+  auto program = bgfx::createProgram(vs, fs);
+
   // Game loop
   int64_t timeOffset = bx::getHPCounter();
   while (!entry::processEvents(width, height, debug, reset)) {
@@ -66,9 +93,22 @@ int _main_(int argc, char** argv) {
     // Dummy draw call
     bgfx::touch(0);
 
+    // Debug info
     bgfx::dbgTextClear();
     bgfx::dbgTextPrintf(0, 1, 0x4f, "Hello BGFX");
     bgfx::dbgTextPrintf(0, 2, 0x6f, "My name is Sean");
+
+    // Draw something
+    bgfx::setVertexBuffer(vertexBuffer);
+    bgfx::setIndexBuffer(indexBuffer);
+
+    bgfx::setState(0
+      | BGFX_STATE_RGB_WRITE
+      | BGFX_STATE_ALPHA_WRITE
+      | BGFX_STATE_MSAA
+    );
+
+    bgfx::submit(0, program);
 
     // Advance to next frame
     bgfx::frame();
