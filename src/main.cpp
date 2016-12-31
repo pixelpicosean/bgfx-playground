@@ -1,14 +1,22 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 #include <bgfx_utils.h>
 #include <common.h>
 
 #include <bgfx/bgfx.h>
-#include <math.h>
+#include <bgfx/embedded_shader.h>
 
 #include "vs_sprite.bin.h"
 #include "fs_sprite.bin.h"
+
+static const bgfx::EmbeddedShader shaders[] = {
+  BGFX_EMBEDDED_SHADER(vs_sprite),
+  BGFX_EMBEDDED_SHADER(fs_sprite),
+
+  BGFX_EMBEDDED_SHADER_END()
+};
 
 struct PosTexcoordVertex {
   float x;
@@ -30,10 +38,10 @@ struct PosTexcoordVertex {
 bgfx::VertexDecl PosTexcoordVertex::decl;
 
 static PosTexcoordVertex vertices[4] = {
-  { -0.5f, +0.5f, 0, 0 },
-  { +0.5f, +0.5f, 0, 0 },
-  { +0.5f, -0.5f, 0, 0 },
-  { -0.5f, -0.5f, 0, 0 },
+  { 100.0f, 100.0f, 0, 0 },
+  { 200.0f, 100.0f, 0, 0 },
+  { 200.0f, 200.0f, 0, 0 },
+  { 100.0f, 200.0f, 0, 0 },
 };
 
 static uint16_t indices[6] = {
@@ -65,6 +73,7 @@ int _main_(int argc, char** argv) {
   PosTexcoordVertex::init();
 
   // Prepare for rendering
+  // - buffers
   auto vertexBuffer = bgfx::createVertexBuffer(
     bgfx::makeRef(vertices, sizeof(vertices)),
     PosTexcoordVertex::decl
@@ -72,9 +81,16 @@ int _main_(int argc, char** argv) {
   auto indexBuffer = bgfx::createIndexBuffer(
     bgfx::makeRef(indices, sizeof(indices))
   );
-  auto vs = bgfx::createShader(bgfx::makeRef(vs_sprite_glsl, sizeof(vs_sprite_glsl)));
-  auto fs = bgfx::createShader(bgfx::makeRef(fs_sprite_glsl, sizeof(fs_sprite_glsl)));
-  auto program = bgfx::createProgram(vs, fs);
+  // - shaders
+  const auto RenderType = bgfx::getRendererType();
+  auto vs = bgfx::createEmbeddedShader(shaders, RenderType, "vs_sprite");
+  auto fs = bgfx::createEmbeddedShader(shaders, RenderType, "fs_sprite");
+  auto program = bgfx::createProgram(vs, fs, true /* destroy shaders when program is destroyed */);
+  // - camera
+  float view[16];
+  bx::mtxOrtho(view, 0.0f, width, height, 0.0f, -1.0f, 1.0f);
+  float proj[16];
+  bx::mtxIdentity(proj);
 
   // Game loop
   int64_t timeOffset = bx::getHPCounter();
@@ -87,7 +103,8 @@ int _main_(int argc, char** argv) {
     const double toMs = 1000.0 / freq;
     const float dt = float((now - timeOffset) / double(bx::getHPFrequency()));
 
-    // Set view 0 default viewport
+    // Set view and projection matrix
+    bgfx::setViewTransform(0, view, proj);
     bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
 
     // Dummy draw call
@@ -115,6 +132,7 @@ int _main_(int argc, char** argv) {
   }
 
   // Cleanup
+  bgfx::destroyProgram(program);
   bgfx::shutdown();
 
   return 0;
