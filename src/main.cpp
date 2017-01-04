@@ -21,14 +21,14 @@ static const bgfx::EmbeddedShader shaders[] = {
 struct PosTexcoordVertex {
   float x;
   float y;
-  int16_t u;
-  int16_t v;
+  float u;
+  float v;
 
   static void init() {
     decl
       .begin()
       .add(bgfx::Attrib::Position,  2, bgfx::AttribType::Float)
-      .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Int16, true, true)
+      .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float, true, true)
       .end();
   }
 
@@ -38,10 +38,10 @@ struct PosTexcoordVertex {
 bgfx::VertexDecl PosTexcoordVertex::decl;
 
 static PosTexcoordVertex vertices[4] = {
-  { 100.0f, 100.0f, 0, 0 },
-  { 200.0f, 100.0f, 0, 0 },
-  { 200.0f, 200.0f, 0, 0 },
-  { 100.0f, 200.0f, 0, 0 },
+  { 100.0f, 100.0f, 0.0f, 0.0f },
+  { 200.0f, 100.0f, 1.0f, 0.0f },
+  { 200.0f, 200.0f, 1.0f, 1.0f },
+  { 100.0f, 200.0f, 0.0f, 1.0f },
 };
 
 static uint16_t indices[6] = {
@@ -86,11 +86,17 @@ int _main_(int argc, char** argv) {
   auto vs = bgfx::createEmbeddedShader(shaders, RenderType, "vs_sprite");
   auto fs = bgfx::createEmbeddedShader(shaders, RenderType, "fs_sprite");
   auto program = bgfx::createProgram(vs, fs, true /* destroy shaders when program is destroyed */);
+  auto uTex = bgfx::createUniform("uTex", bgfx::UniformType::Int1);
   // - camera
   float view[16];
   bx::mtxOrtho(view, 0.0f, width, height, 0.0f, -1.0f, 1.0f);
   float proj[16];
   bx::mtxIdentity(proj);
+
+  auto img = loadTexture("media/tank.png", 0
+    | BGFX_TEXTURE_U_CLAMP | BGFX_TEXTURE_V_CLAMP
+    | BGFX_TEXTURE_MIN_POINT | BGFX_TEXTURE_MAG_POINT
+  );
 
   // Game loop
   int64_t timeOffset = bx::getHPCounter();
@@ -119,10 +125,12 @@ int _main_(int argc, char** argv) {
     bgfx::setVertexBuffer(vertexBuffer);
     bgfx::setIndexBuffer(indexBuffer);
 
+    bgfx::setTexture(0, uTex, img);
+
     bgfx::setState(0
       | BGFX_STATE_RGB_WRITE
       | BGFX_STATE_ALPHA_WRITE
-      | BGFX_STATE_MSAA
+      | BGFX_STATE_BLEND_SRC_ALPHA
     );
 
     bgfx::submit(0, program);
@@ -132,7 +140,9 @@ int _main_(int argc, char** argv) {
   }
 
   // Cleanup
+  bgfx::destroyTexture(img);
   bgfx::destroyProgram(program);
+  bgfx::destroyUniform(uTex);
   bgfx::shutdown();
 
   return 0;
