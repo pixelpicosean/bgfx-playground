@@ -141,6 +141,8 @@ int _main_(int argc, char** argv) {
 
   // Cleanup
   bgfx::destroyTexture(img);
+  bgfx::destroyVertexBuffer(vertexBuffer);
+  bgfx::destroyIndexBuffer(indexBuffer);
   bgfx::destroyProgram(program);
   bgfx::destroyUniform(uTex);
   bgfx::shutdown();
